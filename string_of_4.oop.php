@@ -1,4 +1,7 @@
 <?php
+
+require_once("config.php");
+
 class String_Of_4 {
 
     private $player1_color;
@@ -8,10 +11,61 @@ class String_Of_4 {
     private $status = "new";
     private $game_id;
 
-    var $side_length;
+
+    function __construct($player1_color_choice, $filename="") {
+
+      if ($filename != "") {
+        $this->load_from_file($filename);
+      }
+
+      else {
+        $row = array();
+
+        
+        // set colors
+        $this->player1_color = $player1_color_choice;
+        
+        switch ($player1_color_choice) {
+          case "red":
+            $this->player2_color = "black";
+            break;
+          case "black":
+            $this->player2_color = "red";
+            break;
+          default:
+            // error
+        }
 
 
-   public function generate_random_string($size = 12) {
+        // setup gameboard multidimensional array
+        for ($i = 0; $i < SIDE_LENGTH; $i++) {
+          for ($j = 0; $j < SIDE_LENGTH; $j++) {
+            $row[$j] = 0;
+          }
+          $this->gameboard[$i] = $row;
+        }
+
+
+
+        // decide which player goes first
+        $this->next_move = mt_rand(1,2);
+
+
+        // set status
+        $this->status = "awaiting";
+
+        
+        // create string id
+        $this->game_id = $this->generate_random_string(12);
+
+      }
+      
+    } // __construct
+
+
+    
+   private function generate_random_string($size = 12) {
+
       $available_chars = "0123456789abcdefghijklmnopqrstuvwxyz";
       $to_return = "";
       
@@ -25,22 +79,12 @@ class String_Of_4 {
     }
 
 
+
+
     public function return_json() {
-      // TODO
+    
       header('Content-type: text/json');
       header('Content-type: application/json');
-/*
-$side_length = 8;
-$game_state = array(
-    "player1_color"   =>  "",
-    "player2_color"   =>  "",
-    "gameboard"       =>  array(),
-    "next_move"       =>  "",
-    "status"          =>  "new",
-    "game_id"         =>  ""
-);
-*/
-
       $to_return = array(
         "player1_color" => $this->player1_color,
         "player2_color" => $this->player2_color, 
@@ -55,54 +99,39 @@ $game_state = array(
 
 
 
+    public function load_from_file($filename) {
 
+      $file_loc = GAMESTATE_DIR . $filename . ".json";
+      $fp = fopen($file_loc,"r") or die("file doesn't exist");
+      $contents = fread($fp, filesize($file_loc));
+      fclose($fp);
 
-    function __construct($player1_color_choice, $_side_length = 8) {
+      $arr_vars = json_decode($contents,true);
+      $this->player1_color = $arr_vars["player1_color"];
+      $this->player2_color = $arr_vars["player2_color"];
+      $this->gameboard = $arr_vars["gameboard"];
+      $this->next_move = $arr_vars["next_move"];
+      $this->status = $arr_vars["status"];
+      $this->game_id = $arr_vars["game_id"];        
 
-      $row = array();
-      $this->side_length = $_side_length;
+    }
+    /*
+$filename = "Somefile.txt"; //creating our file name
+$filehandle = fopen($filename, "w"); //create a file and a file handle (description)
+fwrite($filehandle, "Dummy data"); //writing into the created file. one more parameter available
+fclose($filehandle); //finish the first file handle, no need to close it. just for demonstration
 
-      
-      // set colors
-      $this->player1_color = $player1_color_choice;
-      
-      switch ($player1_color_choice) {
-        case "red":
-          $this->player2_color = "black";
-          break;
-        case "black":
-          $this->player2_color = "red";
-          break;
-        default:
-          // error
-      }
+$fileread = fopen($filename, "r"); //create a second handle (which is the same like the first)
+$filetext = fread($filename, filesize($filename)); //read *all* data from the file
+fclose($flieread); //end handle
+echo $filetext; //echo the file data
 
-
-      // setup gameboard multidimensional array
-      for ($i = 0; $i < $this->side_length; $i++) {
-        for ($j = 0; $j < $this->side_length; $j++) {
-          $row[$j] = 0;
-        }
-        $this->gameboard[$i] = $row;
-      }
-
-
-
-      // decide which player goes first
-      $this->next_move = mt_rand(1,2);
-
-
-      // set status
-      $this->status = "awaiting";
+      */
 
       
-      // create string id
-      $this->game_id = $this->generate_random_string(12);
-      
-    } // __construct
-
+  
 }
 
-$my_game = new String_Of_4("red");
+$my_game = new String_Of_4("red","trial");
 $my_game->return_json();
 ?>

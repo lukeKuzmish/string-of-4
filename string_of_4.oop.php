@@ -17,14 +17,28 @@ class String_Of_4 {
  1   [ ] [ ] [ ] [C] [ ] [ ] [ ] [ ]
  0   [A] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
 */
+
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  private fields
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
     private $player1_color;
     private $player2_color;
     private $gameboard = array();
     private $next_move;
     private $status = "new";
     private $game_id;
+    private $error;
 
 
+
+
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  public methods
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */ 
     function __construct($player1_color_choice, $filename="") {
 
       if ($filename != "") {
@@ -47,8 +61,9 @@ class String_Of_4 {
             // error
         }
 
-        $col = array();
         // setup gameboard multidimensional array
+        $col = array();
+        
         for ($i = 0; $i < SIDE_LENGTH; $i++) {
           for ($j = 0; $j < SIDE_LENGTH; $j++) {
             $col[$j] = 0;
@@ -71,58 +86,12 @@ class String_Of_4 {
     } // __construct
 
 
-    
-   private function generate_random_string($size = 12) {
 
-      $available_chars = "0123456789abcdefghijklmnopqrstuvwxyz";
-      $to_return = "";
-      
-      for ($i = 0; $i < $size; $i++) {
-        $random_char_index = mt_rand(0, strlen($available_chars) - 1);
-        $to_return = $to_return . $available_chars[$random_char_index];
-      }
-
-      // TODO check for existence of this string already in DB/flat file
-      return $to_return;
+    public function __destruct() {
+      $this->write_to_file();
+      $this->show_json();
     }
 
-
-
-
-    public function return_json() {
-    
-      header('Content-type: text/json');
-      header('Content-type: application/json');
-      $to_return = array(
-        "player1_color" => $this->player1_color,
-        "player2_color" => $this->player2_color, 
-        "gameboard"     => $this->gameboard,
-        "next_move"     => $this->next_move,
-        "status"        => $this->status,
-        "game_id"       => $this->game_id        
-      );
-      print json_encode($to_return);
-      die;
-    }
-
-
-
-    public function load_from_file($filename) {
-
-      $file_loc = GAMESTATE_DIR . $filename . ".json";
-      $fp = fopen($file_loc,"r") or die("file doesn't exist");
-      $contents = fread($fp, filesize($file_loc));
-      fclose($fp);
-
-      $arr_vars = json_decode($contents,true);    // true makes array associative
-      $this->player1_color = $arr_vars["player1_color"];
-      $this->player2_color = $arr_vars["player2_color"];
-      $this->gameboard = $arr_vars["gameboard"];
-      $this->next_move = $arr_vars["next_move"];
-      $this->status = $arr_vars["status"];
-      $this->game_id = $arr_vars["game_id"];        
-
-    }
 
 
     public function make_move($col) {
@@ -140,27 +109,123 @@ class String_Of_4 {
         $drop_color = $this->player2_color;
       }
 
+        $v = 0;
       foreach ($this->gameboard[$col] as &$slot) {
-        if ($slot == 0) {
+        if ($slot === 0) {
           $slot = $drop_color;
+          $this->update_player();
           return true;
         }
-      // TODO
-      // tried adding to a column that is full
-      // RETURN_AN_ERROR_WITH_JSON
-      // disable this in the UI too
       }
 
+      $this->add_error("slot full");
+      return false;
 
     }
+
+
+
+    public function show_json() {
     
-}
+      // set headers
+      header('Content-type: text/json');
+      header('Content-type: application/json');
+      print $this->get_json();
+      die;
+    }
 
 
 
-$my_game = new String_Of_4("r","trial");
-if ($my_game->make_move(1) == true) {
-  // TODO successfully dropped, now switch players
-}
-$my_game->return_json();
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  private methods
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */    
+   private function generate_random_string($size = 12) {
+
+      $available_chars = "0123456789abcdefghijklmnopqrstuvwxyz";
+      $to_return = "";
+
+      // grab $size characters from $available_chars to make a unique game id
+      for ($i = 0; $i < $size; $i++) {
+        $random_char_index = mt_rand(0, strlen($available_chars) - 1);
+        $to_return = $to_return . $available_chars[$random_char_index];
+      }
+
+      // if the string is already a saved game state file, restart the process
+      if (file_exists(GAMESTATE_DIR . $to_return . ".json")) {
+        $to_return = $this->generate_random_string($size);
+      }
+      
+      return $to_return;
+    }
+
+
+
+    private function add_error($error) {
+      $this->error = $error;
+    }
+
+
+// returns string of JSON encoded game data
+    private function get_json() {
+      // set variables to return
+      $to_return = array(
+        "player1_color" => $this->player1_color,
+        "player2_color" => $this->player2_color, 
+        "gameboard"     => $this->gameboard,
+        "next_move"     => $this->next_move,
+        "status"        => $this->status,
+        "game_id"       => $this->game_id        
+      );
+      
+      // if there is an error string, set that too
+      if (isset($this->error)) { $to_return["error"] = $this->error; }
+
+      return json_encode($to_return);
+    }
+
+    
+    
+    private function load_from_file($filename) {
+
+      $file_loc = GAMESTATE_DIR . $filename . ".json";
+      $fp = fopen($file_loc,"r") or $this->add_error("file doesn't exist");
+      $contents = fread($fp, filesize($file_loc));
+      fclose($fp);
+
+      $arr_vars = json_decode($contents,true);    // true makes array associative
+      $this->player1_color = $arr_vars["player1_color"];
+      $this->player2_color = $arr_vars["player2_color"];
+      $this->gameboard = $arr_vars["gameboard"];
+      $this->next_move = $arr_vars["next_move"];
+      $this->status = $arr_vars["status"];
+      $this->game_id = $arr_vars["game_id"];        
+
+    }
+
+
+
+    private function write_to_file() {
+      $file_loc = GAMESTATE_DIR . $this->game_id . ".json";
+      $fp = fopen($file_loc,"w");
+      fwrite($fp, $this->get_json());
+      fclose($fp);
+    }
+
+    
+
+    private function update_player() {
+
+      switch ($this->next_move) {
+        case (1):
+          $this->next_move = 2;
+          break;
+        case (2):
+          $this->next_move = 1;
+      }
+    }
+
+
+} // class String_Of_4
+
 ?>

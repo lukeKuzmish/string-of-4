@@ -130,7 +130,7 @@ class String_Of_4 {
 
     public function player2_join() {
       if ($this->status == "awaiting") {
-        $this->status = "ready";
+        $this->status = "waiting for player " . $this->next_move;
       }
       else {
         $this->add_error("can't join game");
@@ -205,7 +205,7 @@ class String_Of_4 {
     private function load_from_file($filename) {
 
       $file_loc = ROOT_DIR . GAMESTATE_DIR . $filename . ".json";
-      $contents = file_get_contents($file_loc);
+      $contents = file_get_contents($file_loc) or $this->add_error("no such game id");
 
       $arr_vars = json_decode($contents,true);    // true makes array associative
       $this->player1_color = $arr_vars["player1_color"];
@@ -236,6 +236,8 @@ class String_Of_4 {
         case (2):
           $this->next_move = 1;
       }
+
+      $this->status = "waiting for player " . $this->next_move;
     }
 
 

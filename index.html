@@ -23,17 +23,17 @@
   <body>
 
     <div id="wrapper">
+      <div id="startGameDiv">
+	      <form id="startGameForm">
+        	  <span>pick your color</span>
+        	  
+          <select id="player1ColorChoice">
+            <option value="r">Red</option>
+            <option value="b">Black</option>
+          </select>
 
-	    <form id="startGameForm">
-      	  <span>pick your color</span>
-      	  
-        <select id="player1ColorChoice">
-          <option value="r">Red</option>
-          <option value="b">Black</option>
-        </select>
-
-		    <input type="submit" value="Begin Game" id="startGame" />
-	    </form>
+		      <input type="submit" value="Begin Game" id="startGame" />
+	      </form>
 	    </div>
 
 
@@ -68,9 +68,34 @@
       }
 
 
-      function loadGame(response) {
-        //  handle the response from backend to draw board n stuff
+      function setup_your_move() {
+        // animations when it's your turn
       }
+
+
+
+      function make_move() {
+          // handle graphics, backend logic,  legality of move
+      }
+
+      
+      function loadGame(game_state) {
+        //  for joining a game        
+        if (game_state.error === undefined) {
+          // no error detected, load in data
+          gameSpace.game_state = game_state;
+          gameSpace.playerNumber = 2;
+          gameSpace.my_color = game_state.next_move;
+        }
+
+        else {
+          // TODO handle error that is described in game_state.error
+          console.log(game_state.error);
+        }
+        
+      }
+
+
 
       function drawMove(col) {
 
@@ -81,30 +106,33 @@
       $(document).ready(function() {
 
         var param_game_id = getURLParam('game_id');
-        if (param_game_id === null) {
+        if (param_game_id !== null) {
           // TODO hide everything that shouldn't be displayed provided game_id was passed by GET
           $.getJSON('joingame.php',
             { game_id : param_game_id },
             function(response) {
-              console.log(response.game_id);
-              gameSpace.game_state = response;
-              var link_to_share = createAbsoluteURL('index.html?game_id=' + gameSpace.game_state.game_id);
-              $('#shareLinkSpan').append(link_to_share);
-              $('#startGameForm').hide();
-              $('#shareLinkSpan').hide();
+              loadGame(response);
+              $('#startGameDiv').hide();
           });
         }
 
         else {
           // no params, set up display
+          console.log("no param");
         }
         
         $('#startGameForm').submit(function(e) {
-            
+            // user clicks to start new game
             var player1_color_choice = 'r';
-            player1_color_choice = $('#player1ColorChoice').val();          
-            // TODO check that input is valid (r or b)
+            player1_color_choice = $('#player1ColorChoice').val();
 
+            if ((player1_color_choice !== 'r') && (player1_color_choice !== 'b')) {
+              // TODO check that input is valid (r or b)
+              alert('nice try, but you must pick either red or black for your color');
+              return false;
+            }
+
+            
             gameSpace.my_color = player1_color_choice;
             
             $.getJSON('newgame.php',

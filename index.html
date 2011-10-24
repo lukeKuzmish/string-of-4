@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>string of 4</title>
+
+    <style>
+      * {
+        font-family:    'Helvetica', sans serif;
+      }
+      
+      #shareLinkSpan {
+        display:    none;
+      }
+    </style>
+    
+    <script type="text/javascript" src="js/jquery-1.6.4.min.js"> </script>
+    <!--
+    <script type="text/javascript" src="js/jquery.getUrlParam.js"> </script>
+    -->
+  </head>
+  <body>
+
+    <div id="wrapper">
+
+	    <form id="startGameForm">
+      	  <span>pick your color</span>
+      	  
+        <select id="player1ColorChoice">
+          <option value="r">Red</option>
+          <option value="b">Black</option>
+        </select>
+
+		    <input type="submit" value="Begin Game" id="startGame" />
+	    </form>
+	    </div>
+
+
+      <span id="shareLinkSpan">Give this link to a friend: </span>
+      <div id="gameContainer"><p>game board will go here</p>
+      </div>
+    </div>
+    
+    <script>
+      // setting up string-of-4 namespace
+      var gameSpace = gameSpace || {};
+      gameSpace.my_color = 'r';
+      gameSpace.playerNumber = 1;
+      gameSpace.game_state = {};
+
+
+  // stolen from http://stackoverflow.com/questions/470832/getting-an-absolute-url-from-a-relative-one-ie6-issue
+      function createAbsoluteURL(url) {
+        var a = document.createElement('a');
+        a.href = url;
+        return a.href;
+      }
+
+
+
+      // getURLParam from http://stackoverflow.com/questions/1403888/get-url-parameter-with-jquery
+      // by JIP
+      function getURLParam(name) {
+        var results = new RegExp('[\\?&]' + name + '=([^&#]*)').exec(window.location.search);
+        if (results === null) { return null; }
+        return results[1] || 1;
+      }
+
+
+      function loadGame(response) {
+        //  handle the response from backend to draw board n stuff
+      }
+
+      function drawMove(col) {
+
+      }
+
+      
+      // document load
+      $(document).ready(function() {
+
+        var param_game_id = getURLParam('game_id');
+        if (param_game_id === null) {
+          // TODO hide everything that shouldn't be displayed provided game_id was passed by GET
+          $.getJSON('joingame.php',
+            { game_id : param_game_id },
+            function(response) {
+              console.log(response.game_id);
+              gameSpace.game_state = response;
+              var link_to_share = createAbsoluteURL('index.html?game_id=' + gameSpace.game_state.game_id);
+              $('#shareLinkSpan').append(link_to_share);
+              $('#startGameForm').hide();
+              $('#shareLinkSpan').hide();
+          });
+        }
+
+        else {
+          // no params, set up display
+        }
+        
+        $('#startGameForm').submit(function(e) {
+            
+            var player1_color_choice = 'r';
+            player1_color_choice = $('#player1ColorChoice').val();          
+            // TODO check that input is valid (r or b)
+
+            gameSpace.my_color = player1_color_choice;
+            
+            $.getJSON('newgame.php',
+                      { color_choice : gameSpace.my_color },
+                      function(response) {
+                        console.log(response.game_id);
+                        gameSpace.game_state = response;
+                        var link_to_share = createAbsoluteURL('index.html?game_id=' + gameSpace.game_state.game_id);
+                        $('#shareLinkSpan').append(link_to_share);
+                        $('#startGameForm').hide();
+                        $('#shareLinkSpan').show();
+                      });
+            
+            console.log(player1_color_choice);
+            return false;
+        });   // #startGameForm submit
+        
+      }); // document wrapper
+      
+      $(function() { console.log('hello again!'); });
+    </script>
+  </body>
+</html>

@@ -30,6 +30,7 @@ class String_Of_4 {
     private $status = "new";
     private $game_id;
     private $error;
+    private $suppress_output = false;
 
 
 
@@ -89,15 +90,17 @@ class String_Of_4 {
 
     public function __destruct() {
       $this->write_to_file();
-      $this->show_json();
+      if ($this->suppress_output == false) {
+        $this->show_json();
+      }
     }
-
 
 
     public function make_move($col) {
 
       // check for bad input
       if (($col >= SIDE_LENGTH) || ($col < 0)) {
+        $this->add_error("incorrect column");
         return false;
       }
 
@@ -109,7 +112,7 @@ class String_Of_4 {
         $drop_color = $this->player2_color;
       }
 
-        $v = 0;
+
       foreach ($this->gameboard[$col] as &$slot) {
         if ($slot === 0) {
           $slot = $drop_color;
@@ -121,6 +124,19 @@ class String_Of_4 {
       $this->add_error("slot full");
       return false;
 
+    }
+
+
+
+    public function player2_join() {
+      if ($this->status == "awaiting") {
+        $this->status = "ready";
+      }
+      else {
+        $this->add_error("can't join game");
+      }
+
+      //$this->suppress_output = true;
     }
 
 
@@ -188,10 +204,8 @@ class String_Of_4 {
     
     private function load_from_file($filename) {
 
-      $file_loc = GAMESTATE_DIR . $filename . ".json";
-      $fp = fopen($file_loc,"r") or $this->add_error("file doesn't exist");
-      $contents = fread($fp, filesize($file_loc));
-      fclose($fp);
+      $file_loc = ROOT_DIR . GAMESTATE_DIR . $filename . ".json";
+      $contents = file_get_contents($file_loc);
 
       $arr_vars = json_decode($contents,true);    // true makes array associative
       $this->player1_color = $arr_vars["player1_color"];
@@ -199,14 +213,13 @@ class String_Of_4 {
       $this->gameboard = $arr_vars["gameboard"];
       $this->next_move = $arr_vars["next_move"];
       $this->status = $arr_vars["status"];
-      $this->game_id = $arr_vars["game_id"];        
-
+      $this->game_id = $arr_vars["game_id"];
     }
 
 
 
     private function write_to_file() {
-      $file_loc = GAMESTATE_DIR . $this->game_id . ".json";
+      $file_loc = ROOT_DIR . GAMESTATE_DIR . $this->game_id . ".json";
       $fp = fopen($file_loc,"w");
       fwrite($fp, $this->get_json());
       fclose($fp);

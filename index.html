@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <title>string of 4</title>
 
-    <style>
+    <style type='text/css'>
       * {
         font-family:    'Helvetica', sans serif;
       }
@@ -16,9 +16,6 @@
     </style>
     
     <script type="text/javascript" src="js/jquery-1.6.4.min.js"> </script>
-    <!--
-    <script type="text/javascript" src="js/jquery.getUrlParam.js"> </script>
-    -->
   </head>
   <body>
 
@@ -38,7 +35,8 @@
 
 
       <span id="shareLinkSpan">Give this link to a friend: </span>
-      <div id="gameContainer"><p>game board will go here</p>
+      <div id="gameContainer" padding='1'>
+        <table id="gameboardTable"></table>
       </div>
     </div>
     
@@ -74,10 +72,49 @@
 
 
 
-      function make_move() {
-          // handle graphics, backend logic,  legality of move
-      }
+      function make_move(col) {
+        // handle graphics, backend logic,  legality of move
 
+		    // legality
+			  //TODO check state
+			
+			  if (gameSpace.game_state.next_move !== gameSpace.playerNumber) {
+			    console.log('not your turn, toughguy');
+				  // not your turn
+				  return false;
+			  }
+			
+			  var len = gameSpace.game_state.gameboard.length;
+			  
+			  for (var row=0; row<len; row++) {
+				  if (gameSpace.game_state.gameboard[col][row]===0) {
+				    console.log('dropping in column ' + col);
+					  // TODO send message to server
+            $.getJSON('move.php',
+                { game_id : gameSpace.game_state.game_id, column : col },
+                function(response) {
+                    gameSpace.game_state = response;
+                    if (gameSpace.game_state.error === undefined) {
+                      // successful move
+                      console.log('move.php request success');
+    						        drawMove(row,col);
+  						        }
+  						        else {
+                        alert('error from move.php.  ' + gameSpace.gamestate.error);
+  						        }
+            });
+            return true;
+				  }
+			  }
+			  
+			  // column is full, choose another TODO
+			  alert('column is full, choose another');
+			  return false;
+				
+				
+			  
+     }
+ 
       
       function loadGame(game_state) {
         //  for joining a game        
@@ -86,6 +123,7 @@
           gameSpace.game_state = game_state;
           gameSpace.playerNumber = 2;
           gameSpace.my_color = game_state.next_move;
+          drawBoard();
         }
 
         else {
@@ -96,11 +134,31 @@
       }
 
 
+      function drawBoard() {
+        var contentToAdd,
+            len = gameSpace.game_state.gameboard.length;
+        for (var row=len-1; row>=0; row--) {
+          contentToAdd += '<tr>';
+          for (var col=0; col<len; col++) {
+            contentToAdd += "<td>" + gameSpace.game_state.gameboard[col][row] + "</td>";
+            console.log('drawing ' + row + ' ' + col);
+          }
+          contentToAdd += '</tr>';
+        }
 
-      function drawMove(col) {
+        $('#gameboardTable').append(contentToAdd);
+        
+      		// TODO td that is a child of #gameboardTable, think it's #gameboardTable > td
+	      	$('td').bind('click',function() { make_move(this.cellIndex);});
+      }
+      
 
+      function drawMove(row,col) {
+		    $('#gameboardTable').html('');
+		    drawBoard();
       }
 
+      
       
       // document load
       $(document).ready(function() {
@@ -141,7 +199,7 @@
                         console.log(response.game_id);
                         gameSpace.game_state = response;
                         var link_to_share = createAbsoluteURL('index.html?game_id=' + gameSpace.game_state.game_id);
-                        $('#shareLinkSpan').append(link_to_share);
+                        $('#shareLinkSpan').append('<br />' + link_to_share);
                         $('#startGameForm').hide();
                         $('#shareLinkSpan').show();
                       });
@@ -151,8 +209,7 @@
         });   // #startGameForm submit
         
       }); // document wrapper
-      
-      $(function() { console.log('hello again!'); });
+    
     </script>
   </body>
 </html>

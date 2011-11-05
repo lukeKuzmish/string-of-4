@@ -32,7 +32,13 @@ class String_Of_4 {
     private $error;
     private $suppress_output = false;
 
+/*
+statuses
 
+  'awaiting'              --  waiting for other player to join
+  'wating for player #'   --  player # has next move
+
+*/
 
 
 

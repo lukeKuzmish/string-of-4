@@ -13,6 +13,11 @@
       #shareLinkSpan {
         display:    none;
       }
+
+      td {
+        width:    30px;
+        height:   30px;
+      }
     </style>
     
     <script type="text/javascript" src="js/jquery-1.6.4.min.js"> </script>
@@ -41,21 +46,11 @@
     </div>
     
     <script>
-      // setting up string-of-4 namespace
-      var gameSpace = gameSpace || {};
-      gameSpace.my_color = 'r';
-      gameSpace.playerNumber = 1;
-      gameSpace.game_state = {};
-      gameSpace.polling = false;
-      gameSpace.timer = null;
-      gameSpace.bothHaveJoined = false;
-
-
   // stolen from http://stackoverflow.com/questions/470832/getting-an-absolute-url-from-a-relative-one-ie6-issue
       function createAbsoluteURL(url) {
         var a = document.createElement('a');
         a.href = url;
-        return a.href;
+        return new String(a.href);
       }
 
 
@@ -67,6 +62,19 @@
         if (results === null) { return null; }
         return results[1] || 1;
       }
+
+
+
+
+      // setting up string-of-4 namespace
+      var gameSpace = gameSpace || {};
+      gameSpace.my_color = 'r';
+      gameSpace.playerNumber = 1;
+      gameSpace.game_state = {};
+      gameSpace.polling = false;
+      gameSpace.timer = null;
+      gameSpace.bothHaveJoined = false;
+
 
 
       function setup_your_move() {
@@ -99,8 +107,8 @@
                     if (gameSpace.game_state.error === undefined) {
                       // successful move
                       console.log('move.php request success');
-    						        drawMove(row,col);
     						        startPolling();
+    						        drawMove(row,col);
   						        }
   						        else {
                         alert('error from move.php.  ' + gameSpace.gamestate.error);
@@ -144,7 +152,7 @@
           contentToAdd += '<tr>';
           for (var col=0; col<len; col++) {
             contentToAdd += "<td>" + gameSpace.game_state.gameboard[col][row] + "</td>";
-            console.log('drawing ' + row + ' ' + col);
+//            console.log('drawing ' + row + ' ' + col);
           }
           contentToAdd += '</tr>';
         }
@@ -159,10 +167,49 @@
       function drawMove(row,col) {
 		    $('#gameboardTable').html('');
 		    drawBoard();
+		    checkForWin();
       }
 
 
+      function handleWin(color) {
+        // TODO UI set up for winner
+        console.log('the winner is color ' + color);
+        if (color == gameSpace.my_color) {
+          alert('You won!');
+          stopPolling();
+        }
+        else {
+          alert('The other player won!');
+          stopPolling();
+        }
+      }
 
+      
+      
+      function checkForWin() {
+        // we assume move has been made
+        var board = gameSpace.game_state.gameboard.slice(0);  // clone array
+        board.push([],[],[]);
+        for (var col = 0; col < board.length; col++) {
+          for (var row = 0; row < board.length; row++) {
+            if ((board[col][row] !== 0) && (board[col][row] !== undefined)) {
+              if   (((board[col][row] === board[col+1][row]) &&
+                     (board[col][row] === board[col+2][row]) &&
+                     (board[col][row] === board[col+3][row])) || 
+                    ((board[col][row] === board[col][row+1]) &&
+                     (board[col][row] === board[col][row+2]) &&
+                     (board[col][row] === board[col][row+3])) ||
+                    ((board[col][row] === board[col+1][row+1]) &&
+                     (board[col][row] === board[col+2][row+2]) &&
+                     (board[col][row] === board[col+3][row+3]))) {
+                handleWin(board[col][row]);
+                break;
+              }
+            }
+          }
+        }
+      }
+      
 
       function startPolling() {
         // request data every 3 seconds
@@ -201,7 +248,7 @@
                 else if (!gameSpace.bothHaveJoined) {
                   gameSpace.bothHaveJoined = gameSpace.bothHaveJoined || true;
                   drawMove();
-                  console.log('other play has joined!');
+                  console.log('other player has joined!');
                 }
                 else if (gameSpace.game_state.next_move === gameSpace.playerNumber) {
                   // your turn
@@ -260,7 +307,7 @@
                         console.log(response.game_id);
                         gameSpace.game_state = response;
                         var link_to_share = createAbsoluteURL('index.html?game_id=' + gameSpace.game_state.game_id);
-                        $('#shareLinkSpan').append('<br />' + link_to_share);
+                        $('#shareLinkSpan').append("<br>" + link_to_share);
                         $('#startGameForm').hide();
                         $('#shareLinkSpan').show();
                         startPolling();
@@ -269,7 +316,7 @@
             console.log(player1_color_choice);
             return false;
         });   // #startGameForm submit
-        
+      
       }); // document wrapper
     
     </script>
